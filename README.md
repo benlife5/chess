@@ -10,3 +10,5 @@ Ben Life ([benjaminlife5@gmail.com](mailto:benjaminlife5@gmail.com))
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+
+Chess Piece Images are from [Chess Mérida](http://www.enpassant.dk/chess/fontimg/merida.htm) (freeware).
