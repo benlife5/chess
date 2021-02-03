@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Chess v0.3</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+        <style type="text/css">
+            table {
+                width: 800px;
+                height: 800px;
+                border-collapse: collapse;
+            }
+            td {
+                width: 100px;
+                height: 100px;
+                border: 1px black solid;
+            }
+            .black {
+                background-color: grey;
+            }
+            .white {
+                background-color: white;
+            }
+            img {
+                width: 99px;
+                height: 99px;
+            }
+            .piece-button {
+                width: 99px;
+                height: 99px;
+            }
+            .empty-square {
+                width: 99px;
+                height: 99px;
+                border: none;
+                background-color: transparent;
+            }
+        </style>
+        <script type="text/javascript">
+            var pieceSelected = 70;
+            var pieceSelectedType;
+            var moveLocations = [-1];
+            var captureLocations = [];
+            var justMoved = false;
+            var isWhiteMove = true;
+            var whiteKingMoved = false, blackKingMoved = false;
+            var whiteRookKSMoved = false, whiteRookQSMoved = false;
+            var blackRookKSMoved = false, blackRookQSMoved = false;
+            
+            var row0 = [0,0,0,0,0,0,0,0];
+            var row1 = [0,0,0,0,0,0,0,0];
+            var row2 = [0,0,0,0,0,0,0,0];
+            var row3 = [0,0,0,0,0,0,0,0];
+            var row4 = [0,0,0,0,0,0,0,0];
+            var row5 = [0,0,0,0,0,0,0,0];
+            var row6 = [0,0,0,0,0,0,0,0];
+            var row7 = [0,0,0,0,0,0,0,0];
+            var board = [row0, row1, row2, row3, row4, row5, row6, row7];
+            
+            function setUpBoard() {
+                for (var i = 60; i <= 67; i++) {
+                    board[Math.trunc(i/10)][(i%10)] = 11;
+                }
+                for (var i = 10; i <= 17; i++) {
+                    board[Math.trunc(i/10)][(i%10)] = 01;
+                }
+                board[7][0] = 12; //rooks
+                board[0][0] = 02;
+                board[7][7] = 12;
+                board[0][7] = 02;
+                
+                board[7][1] = 13; //knights
+                board[0][6] = 03;
+                board[7][6] = 13;
+                board[0][1] = 03;
+                
+                board[7][2] = 14; //bishops
+                board[0][5] = 04;
+                board[7][5] = 14;
+                board[0][2] = 04;
+                
+                board[7][3] = 15; //queens
+                board[0][4] = 05;
+                board[7][4] = 16; //kings
+                board[0][3] = 06;
+                
+                var logString = "";
+                for (var i = 7; i >= 0; i--) {
+                    for (var a = 0; a <= 7; a++) {
+                        logString = logString + board[i][a];
+                        logString = logString + " ";
+                    }
+                    logString = logString + "\n";
+                }
+                       
+                console.log(logString);
+                updateBoard();
+                
+            }
+            
+            function updateBoard() { //move physical pieces
+                for (var r = 0; r <=7; r++) { //each row
+                    for (var c = 0; c <= 7; c++) { //each col
+                        if (board[r][c] !== 0) { //if not empty, then place the piece
+                            if(isWhiteMove && Math.trunc(board[r][c] / 10) == 0) { //white move -> white pieces
+                                document.getElementById(r + "" + c).innerHTML = '<input type="image" class="piece-button" src=pieces/' + board[r][c] + '.png border="0" onClick="pieceSelect(' + r + '' + c + ')">';
+                            } else if (!isWhiteMove && Math.trunc(board[r][c] / 10) == 1) { //black move -> black pieces
+                                document.getElementById(r + "" + c).innerHTML = '<input type="image" class="piece-button" src=pieces/' + board[r][c] + '.png border="0" onClick="pieceSelect(' + r + '' + c + ')">';
+                            } else if(isWhiteMove && Math.trunc(board[r][c] / 10) == 1) { //white move -> black pieces
+                                document.getElementById(r + "" + c).innerHTML = '<input type="image" class="piece-button" src=pieces/' + board[r][c] + '.png border="0" onClick="capture(' + r + '' + c + ')">';
+                            } else if(!isWhiteMove && Math.trunc(board[r][c] / 10) == 0) { //black move -> white pieces
+                                document.getElementById(r + "" + c).innerHTML = '<input type="image" class="piece-button" src=pieces/' + board[r][c] + '.png border="0" onClick="capture(' + r + '' + c + ')">';
+                            } else {
+                                console.log("Error in updating board!");
+                            }
+                        } else { //if empty, allow move
+                            document.getElementById(r + "" + c).innerHTML = '<input type="submit" class="empty-square" value="" border="0" onClick="move(' + r + '' + c + ')">';
+                        }
+                    }
+                }
+                var move;
+                if(isWhiteMove) {
+                    move = "white";
+                } else {
+                    move = "black";
+                }
+                document.getElementById("move-id").innerHTML = move;
+                console.log("bQS: " + blackRookQSMoved + " , ") //!!!!!!!!! STILL ERRORS HERE WITH CASTLING, NEED TO CHECK ROOK VARIABLES
+            }
+            
+            function pieceSelect (location) { 
+                console.log("running pieceSelect, location = " + location);
+                clearAllColors();
+                if (Math.trunc(location /10) === 0) {
+                    location = 0 + "" + location;
+                }
+                pieceSelected = location;
+                pieceSelectedType = board[Math.trunc(location/10)][(location%10)];
+                justMoved = false;
+                showMoves(location, pieceSelectedType);
+                document.getElementById(location).style = "background-color: blue;";
+            }
+            
+            function showMoves (location, pieceSelectedType) {
+                var row = Math.trunc(location/10);
+                var col = location % 10;
+                var logString = "";
+                for (var i = 7; i >= 0; i--) {
+                    for (var a = 0; a <= 7; a++) {
+                        logString = logString + board[i][a];
+                        logString = logString + " ";
+                    }
+                    logString = logString + "\n";
+                }
+                       
+                console.log(logString);
+                switch (pieceSelectedType) {
+                    case 1:
+                        moveLocations[0] = location + 10; //pawn foward 1
+                        if(board[row + 1][col] !=0) {
+                            moveLocations.shift();
+                        } else if (row === 1 && board[row + 2][col] ==0) { //if at start, foward 2
+                            moveLocations[1] = location + 20;
+                        }
+                        if (col != 7 && Math.trunc(board[row + 1][col + 1] / 10 ) == 1) { //capturable piece top right
+                            captureLocations.push(location + 11);
+                            console.log("Type 1");
+                        }
+                        if (col != 0 && Math.trunc(board[row + 1][col - 1] / 10 ) == 1) { //capturable piece top left
+                            captureLocations.push(location + 9);
+                            console.log("Type 2");
+                        }
+                        
+                        break;
+                        
+                    case 11:
+                        console.log((row - 1)+ "," + (col +1) + " " + Math.trunc(board[row - 1][col + 1] / 10 ) + " " + (row-1) + "," + (col-1) +Math.trunc(board[row - 1][col - 1] / 10));
+                        moveLocations[0] = location - 10;
+                        if(board[row - 1][col] !=0) {
+                            moveLocations.shift();
+                        } else if (row === 6 && board[row - 2][col] ==0) { //if at start, down 2
+                            moveLocations[1] = location - 20;
+                        }
+                        if (col != 7 && Math.trunc(board[row - 1][col + 1] / 10 ) == 0 && board[row - 1][col + 1] / 10 != 0) {
+                            captureLocations.push(location - 9);
+                            console.log("Type 3");
+                        }
+                        if (col != 0 && Math.trunc(board[row - 1][col - 1] / 10) == 0 && board[row - 1][col - 1] / 10 != 0) {
+                            captureLocations.push(location - 11);
+                            console.log("Type 4");
+                        }
+                        break;
+                    case 2: //rooks
+                    case 12:
+                        moveLocations = [];
+                        for(var i = Number(row + 1); i <= 7; i++) { //up
+                            console.log("isWhiteMove? " + isWhiteMove + "b[i][col] % 10 = " + board[i][col]  % 10);
+                            if (board[i][col] === 0) {
+                                moveLocations.push(Number(i + "" + col));
+                            } else {
+                                if(isWhiteMove && Math.trunc(board[i][col] / 10) === 1) {
+                                    captureLocations.push(Number(i + "" + col));
+                                } else if (!isWhiteMove && Math.trunc(board[i][col] / 10) === 0) {
+                                    captureLocations.push(Number(i + "" + col));
+                                }
+                                i = 10;
+                            }
+                        }
+                        for(var i = Number(row - 1); i >= 0; i--) { //down
+                            if (board[i][col] === 0) {
+                                moveLocations.push(Number(i + "" + col));
+                            } else {
+                                if(isWhiteMove && Math.trunc(board[i][col] / 10) === 1) {
+                                    captureLocations.push(Number(i + "" + col));
+                                } else if (!isWhiteMove && Math.trunc(board[i][col] / 10) === 0) {
+                                    captureLocations.push(Number(i + "" + col));
+                                }
+                                i = -1;
+                            }
+                        }
+                        for(var i = Number(col + 1) ; i <= 7; i++) {  //right
+                            console.log("i= " + i);
+                            if (board[row][i] === 0) {
+                                moveLocations.push(Number(row + "" + i));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[row][i] / 10) === 1) {
+                                    captureLocations.push(Number(row + "" + i));
+                                } else if (!isWhiteMove && Math.trunc(board[row][i] / 10) === 0) {
+                                    captureLocations.push(Number(row + "" + i));
+                                }
+                                i = 10;
+                            }
+                        }
+                        for(var i = Number(col - 1); i >= 0; i--) { //left
+                            if (board[row][i] === 0) {
+                                moveLocations.push(Number(row + "" + i));
+                            } else {
+                                if(isWhiteMove && Math.trunc(board[row][i] / 10) === 1) {
+                                    captureLocations.push(Number(row + "" + i));
+                                } else if (!isWhiteMove && Math.trunc(board[row][i] / 10) === 0) {
+                                    captureLocations.push(Number(row + "" + i));
+                                }
+                                i = -1;
+                            }
+                        }
+                        
+                        break;
+                    case 3: //knights
+                    case 13:
+                        console.log("row: " + row + " col: " +col);
+                        moveLocations[0] = Number((row + 2) + "" + (col + 1));
+                        moveLocations[1] = Number((row + 2) + "" + (col - 1));
+                        moveLocations[2] = Number((row + 1) + "" + (col + 2));
+                        moveLocations[3] = Number((row + 1) + "" + (col - 2));
+                        moveLocations[4] = Number((row - 2) + "" + (col + 1));
+                        moveLocations[5] = Number((row - 2) + "" + (col - 1));
+                        moveLocations[6] = Number((row - 1) + "" + (col + 2));
+                        moveLocations[7] = Number((row - 1) + "" + (col - 2));
+                        console.log(moveLocations);
+                        
+                        var mL0 = moveLocations[0];
+                        var mL1 = moveLocations[1];
+                        var mL2 = moveLocations[2];
+                        var mL3 = moveLocations[3];
+                        var mL4 = moveLocations[4];
+                        var mL5 = moveLocations[5];
+                        var mL6 = moveLocations[6];
+                        var mL7 = moveLocations[7];
+                        console.log(mL0 + ", " + mL1 + ", " + mL2 + ", " + mL3 + ", " + mL4 + ", " + mL5 + ", " + mL6 + ", " + mL7);
+                        moveLocations = [];
+                            if(!isNaN(mL0)) {moveLocations.push(mL0); console.log("0 is number");}
+                            if(!isNaN(mL1)) {moveLocations.push(mL1); console.log("1 is number");}
+                            if(!isNaN(mL2)) {moveLocations.push(mL2); console.log("2 is number");}
+                            if(!isNaN(mL3)) {moveLocations.push(mL3); console.log("3 is number");}
+                            if(!isNaN(mL4)) {moveLocations.push(mL4); console.log("4 is number");}
+                            if(!isNaN(mL5)) {moveLocations.push(mL5); console.log("5 is number");}
+                            if(!isNaN(mL6)) {moveLocations.push(mL6); console.log("6 is number");}
+                            if(!isNaN(mL7)) {moveLocations.push(mL7); console.log("7 is number");}
+                        console.log(moveLocations);
+                        pieceColor = (Math.trunc(board[row][col] / 10));
+                        
+                        for (var x = 0; x <=7; x = x + 1) {
+                            console.log("x= " + x);
+                            console.log("moveL[x] = " + moveLocations[x]);
+                            if(!(typeof moveLocations[x] == "undefined")) {
+                                if(moveLocations[x] > 77 || moveLocations[x] < 0) {
+                                    console.log("Splicing Rows: " + moveLocations[x]);
+                                    moveLocations.splice(x, 1);
+                                    x--;
+                                } else if(moveLocations[x] % 10 > 7 || moveLocations[x] % 10 < 0) {
+                                    console.log("Splicing Cols: " + moveLocations[x]);
+                                    moveLocations.splice(x, 1);
+                                    x--;
+                                } else {
+                                    attemptedMoveToColor = Math.trunc(board[Math.trunc(moveLocations[x] / 10)][moveLocations[x] % 10] / 10);
+                                    if((pieceColor == 0 && attemptedMoveToColor == 1) || (pieceColor == 1 && attemptedMoveToColor == 0 && board[Math.trunc(moveLocations[x] / 10)][moveLocations[x] % 10]  !== 0)) {
+                                        console.log("Switching: " + moveLocations[x] + " to potential capture");
+                                        captureLocations.push(moveLocations[x]);
+                                        moveLocations.splice(x, 1);
+                                        x--;
+                                    } else if (board[Math.trunc(moveLocations[x] / 10)][moveLocations[x] % 10] !== 0) {
+                                        console.log("Splicing bc of other piece at: " + moveLocations[x]);
+                                        moveLocations.splice(x, 1);
+                                        x--;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        break;
+                    case 4: //bishops
+                    case 14:
+                        var cRow, cCol;
+                        moveLocations = [];
+                        for(var shift = 1; shift <=7; shift++) { //up right
+                            cRow = Number(row + shift);
+                            cCol = Number(col + shift);
+                            console.log("cR, cC = " + cRow + ", " + cCol);
+                            if (cRow > 7 || cCol > 7) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                console.log("made it!");
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        for(var shift = 1; shift <=7; shift++) { //up left
+                            cRow = Number(row + shift);
+                            cCol = Number(col - shift);
+                            if (cRow > 7 || cCol < 0) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        for(var shift = 1; shift <=7; shift++) { //down right
+                            cRow = Number(row - shift);
+                            cCol = Number(col + shift);
+                            if (cRow < 0 || cCol > 7) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        for(var shift = 1; shift <=7; shift++) { //down left
+                            cRow = Number(row - shift);
+                            cCol = Number(col - shift);
+                            if (cRow < 0 || cCol < 0) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        
+                        break;
+                    case 5: //queens
+                    case 15:
+                        moveLocations = [];
+                        for(var i = Number(row + 1); i <= 7; i++) { //up
+                            console.log("isWhiteMove? " + isWhiteMove + "b[i][col] % 10 = " + board[i][col]  % 10);
+                            if (board[i][col] === 0) {
+                                moveLocations.push(Number(i + "" + col));
+                            } else {
+                                if(isWhiteMove && Math.trunc(board[i][col] / 10) === 1) {
+                                    captureLocations.push(Number(i + "" + col));
+                                } else if (!isWhiteMove && Math.trunc(board[i][col] / 10) === 0) {
+                                    captureLocations.push(Number(i + "" + col));
+                                }
+                                i = 10;
+                            }
+                        }
+                        for(var i = Number(row - 1); i >= 0; i--) { //down
+                            if (board[i][col] === 0) {
+                                moveLocations.push(Number(i + "" + col));
+                            } else {
+                                if(isWhiteMove && Math.trunc(board[i][col] / 10) === 1) {
+                                    captureLocations.push(Number(i + "" + col));
+                                } else if (!isWhiteMove && Math.trunc(board[i][col] / 10) === 0) {
+                                    captureLocations.push(Number(i + "" + col));
+                                }
+                                i = -1;
+                            }
+                        }
+                        for(var i = Number(col + 1) ; i <= 7; i++) {  //right
+                            console.log("i= " + i);
+                            if (board[row][i] === 0) {
+                                moveLocations.push(Number(row + "" + i));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[row][i] / 10) === 1) {
+                                    captureLocations.push(Number(row + "" + i));
+                                } else if (!isWhiteMove && Math.trunc(board[row][i] / 10) === 0) {
+                                    captureLocations.push(Number(row + "" + i));
+                                }
+                                i = 10;
+                            }
+                        }
+                        for(var i = Number(col - 1); i >= 0; i--) { //left
+                            if (board[row][i] === 0) {
+                                moveLocations.push(Number(row + "" + i));
+                            } else {
+                                if(isWhiteMove && Math.trunc(board[row][i] / 10) === 1) {
+                                    captureLocations.push(Number(row + "" + i));
+                                } else if (!isWhiteMove && Math.trunc(board[row][i] / 10) === 0) {
+                                    captureLocations.push(Number(row + "" + i));
+                                }
+                                i = -1;
+                            }
+                        }
+                        
+                        var cRow, cCol;
+                        for(var shift = 1; shift <=7; shift++) { //up right
+                            cRow = Number(row + shift);
+                            cCol = Number(col + shift);
+                            console.log("cR, cC = " + cRow + ", " + cCol);
+                            if (cRow > 7 || cCol > 7) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                console.log("made it!");
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        for(var shift = 1; shift <=7; shift++) { //up left
+                            cRow = Number(row + shift);
+                            cCol = Number(col - shift);
+                            if (cRow > 7 || cCol < 0) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        for(var shift = 1; shift <=7; shift++) { //down right
+                            cRow = Number(row - shift);
+                            cCol = Number(col + shift);
+                            if (cRow < 0 || cCol > 7) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        for(var shift = 1; shift <=7; shift++) { //down left
+                            cRow = Number(row - shift);
+                            cCol = Number(col - shift);
+                            if (cRow < 0 || cCol < 0) {
+                                shift = 10;
+                            } else if(board[cRow][cCol] === 0) {
+                                moveLocations.push(Number(cRow + "" + cCol));
+                            } else {
+                                //console.log("isWM? " + isWhiteMove + " m.t(b[[i][col]) = " + Math.trunc(board[i][col] / 10))
+                                if(isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 1) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                } else if (!isWhiteMove && Math.trunc(board[cRow][cCol] / 10) === 0) {
+                                    captureLocations.push(Number(cRow + "" + cCol));
+                                }
+                                shift = 10;
+                            }
+                        }
+                        break;
+                    case 6: //kings
+                    case 16:
+                        console.log("row: " + row + " col: " +col);
+                        moveLocations[0] = Number((row + 1) + "" + (col));
+                        moveLocations[1] = Number((row - 1) + "" + (col));
+                        moveLocations[2] = Number((row) + "" + (col + 1));
+                        moveLocations[3] = Number((row) + "" + (col - 1));
+                        moveLocations[4] = Number((row + 1) + "" + (col + 1));
+                        moveLocations[5] = Number((row + 1) + "" + (col - 1));
+                        moveLocations[6] = Number((row - 1) + "" + (col + 1));
+                        moveLocations[7] = Number((row - 1) + "" + (col - 1));
+                        console.log(moveLocations);
+                                                
+                        for(var i = 0; i < moveLocations.length; i++) {
+                            if(isNaN(moveLocations[i])) {
+                                moveLocations.splice(i,1);
+                                i--;
+                            } else if(moveLocations[i] < 0 || moveLocations[i] > 77) {
+                                console.log("splicing " + moveLocations[i]);
+                                moveLocations.splice(i,1);
+                                i--;
+                            }
+                        }
+                        for(var i = 0; i < moveLocations.length; i++) {
+                            console.log("New checking mL[" + i + "] which is loc " + moveLocations[i] + " isWhiteMove? " + isWhiteMove);
+                            attemptedMoveToColor = Math.trunc(board[Math.trunc(moveLocations[i] / 10)][moveLocations[i] % 10] / 10);
+                            if(isWhiteMove && attemptedMoveToColor === 0 && board[Math.trunc(moveLocations[i] / 10)][moveLocations[i] % 10] !== 0) {
+                                console.log("splicing (same color): " + moveLocations[i]);
+                                moveLocations.splice(i,1);
+                                i--;
+                            } else if(isWhiteMove && attemptedMoveToColor === 1) {
+                                console.log("Changing to capture: " + moveLocations[i]);
+                                captureLocations.push(moveLocations[i]);
+                                moveLocations.splice(i,1);
+                                i--;
+                            } else if(!isWhiteMove && attemptedMoveToColor === 1) {
+                                console.log("splicing (same color): " + moveLocations[i]);
+                                moveLocations.splice(i,1);
+                                i--;
+                            } else if(!isWhiteMove && attemptedMoveToColor === 0  && board[Math.trunc(moveLocations[i] / 10)][moveLocations[i] % 10] !== 0) {
+                                console.log("Changing to capture: " + moveLocations[i]);
+                                captureLocations.push(moveLocations[i]);
+                                moveLocations.splice(i,1);
+                                i--;
+                            }
+                        }
+                        console.log(moveLocations);
+                        console.log(captureLocations);
+                        break;
+                }
+                console.log("moveLocations: " + moveLocations);
+                if(moveLocations[0] !== -1) {
+                    for (var i = 0; i < moveLocations.length; i++) {
+                       if (Math.trunc(moveLocations[i] / 10) === 0) {
+                           moveLocations[i] = 0 + "" + moveLocations[i];
+                       }
+                       if (!isNaN(moveLocations[i])) {
+                           document.getElementById(moveLocations[i]).style = "background-color: green;";
+                       }
+                       moveLocations[i] = Number(moveLocations[i]);
+                     }
+                }
+                for (var i = 0; i < captureLocations.length; i++) {
+                    if (Math.trunc(captureLocations[i] / 10) === 0) {
+                           captureLocations[i] = 0 + "" + captureLocations[i];
+                       }
+                    document.getElementById(captureLocations[i]).style = "background-color: yellow;"; 
+                    captureLocations[i] = Number(captureLocations[i]);
+                }
+                
+            }
+            
+            function castle(toKingSide) {
+                if (isWhiteMove && !whiteKingMoved) {
+                    if (toKingSide && !whiteRookKSMoved) {
+                        if(board[0][1] === 0 && board[0][2] === 0) {
+                            board[0][0] = 06;
+                            board[0][3] = 02;
+                            isWhiteMove = false;
+                            whiteKingMoved = true;
+                        }
+                    } else if (!toKingSide && !whiteRookQSMoved) {
+                        if(board[0][5] === 0 && board[0][6] === 0 && board[0][6] === 0) {
+                            board[0][7] = 06;
+                            board[0][3] = 02;
+                            isWhiteMove = false;
+                            whiteKingMoved = true;
+                        }
+                    }
+                } else if (!isWhiteMove && !blackKingMoved) {
+                    if (toKingSide && !blackRookKSMoved) {
+                        if(board[7][5] === 0 && board[7][6] === 0) {
+                            board[7][7] = 16;
+                            board[7][4] = 12;
+                            isWhiteMove = true;
+                            blackKingMoved = true;
+                        }
+                    } else if (!toKingSide && !blackRookQSMoved) {
+                        if(board[7][1] === 0 && board[7][2] === 0 && board[7][3] === 0) {
+                            board[7][0] = 16;
+                            board[7][4] = 12;
+                            isWhiteMove = true;
+                            blackKingMoved = true;
+                        }
+                    }
+                }
+                updateBoard();
+                
+            }
+            
+            function move (location) {
+                if(!justMoved && moveLocations.includes(location)) {
+                    board[Math.trunc(location/10)][(location%10)] = pieceSelectedType;
+                    board[Math.trunc(pieceSelected/10)][(pieceSelected%10)] = 0;
+                    justMoved = true;
+                    isWhiteMove = !isWhiteMove;
+                    switch(pieceSelectedType) {
+                        case 6:
+                            whiteKingMoved = true;
+                            break;
+                        case 16:
+                            blackKingMoved = true;
+                            break
+                        case 2:
+                            if (location == "00") {
+                                whiteRookKSMoved = true;
+                            } else if (location == "07") {
+                                whiteRookQSMoved = true;
+                            }
+                            break;
+                        case 12:
+                            if (location === 70) {
+                                whiteRookKSMoved = true;
+                            } else if (location === 77) {
+                                whiteRookQSMoved = true;
+                            }
+                            break;
+                    }
+                    clearAllColors();
+                    updateBoard();
+                }
+                
+            }
+            
+            function capture(location) {
+                console.log("Trying to capture at loc = " + location);
+                console.log("Piece capturing: " + pieceSelected);
+                console.log("just moved: " + justMoved + " ; cL includes" + captureLocations.includes(location));
+                if(!justMoved && captureLocations.includes(location)) {
+                    console.log("Inside the if");
+                    board[Math.trunc(location/10)][(location%10)] = pieceSelectedType;
+                    board[Math.trunc(pieceSelected/10)][(pieceSelected%10)] = 0;
+                    isWhiteMove = !isWhiteMove;
+                    justMoved = true;
+                    clearAllColors();
+                    updateBoard();
+                }
+                             
+                
+            }
+            
+            function clearAllColors() {
+                for (var r = 0; r <=7; r++) {
+                    for (var c = 0; c <= 7; c++) {
+                        //console.log("clearing " + r + "," + c);
+                        document.getElementById(r + "" + c).style = "background-color: ;";
+                    }
+                }
+                moveLocations = [-1];
+                captureLocations = [];
+            }
+        </script>
+    </head>
+    <body>
+        <!--
+        70 71 72 73 74 75 76 77
+        60 61 62 63 64 65 66 67
+        50 51 52 53 54 55 56 57
+        40 41 42 43 44 45 46 47
+        30 31 32 33 34 35 36 37
+        20 21 22 23 24 25 26 27
+        10 11 12 13 14 15 16 17
+        00 01 02 03 04 05 06 07
+        
+        white = 0
+        black = 1
+        pawn = 1
+        rook = 2
+        knight = 3
+        bishop = 4
+        queen = 5
+        king = 6
+        -->
+        <table>
+            <tr>
+                <td class="square black" id="70"></td>
+                <td class="square white" id="71"></td>
+                <td class="square black" id="72"></td>
+                <td class="square white" id="73"></td>
+                <td class="square black" id="74"></td>
+                <td class="square white" id="75"></td>
+                <td class="square black" id="76"></td>
+                <td class="square white" id="77"></td>
+            </tr>
+            <tr>
+                <td class="square white" id="60"></td>
+                <td class="square black" id="61"></td>
+                <td class="square white" id="62"></td>
+                <td class="square black" id="63"></td>
+                <td class="square white" id="64"></td>
+                <td class="square black" id="65"></td>
+                <td class="square white" id="66"></td>
+                <td class="square black" id="67"></td>
+            </tr>
+            <tr>
+                <td class="square black" id="50"></td>
+                <td class="square white" id="51"></td>
+                <td class="square black" id="52"></td>
+                <td class="square white" id="53"></td>
+                <td class="square black" id="54"></td>
+                <td class="square white" id="55"></td>
+                <td class="square black" id="56"></td>
+                <td class="square white" id="57"></td>
+            </tr>
+            <tr>
+                <td class="square white" id="40"></td>
+                <td class="square black" id="41"></td>
+                <td class="square white" id="42"></td>
+                <td class="square black" id="43"></td>
+                <td class="square white" id="44"></td>
+                <td class="square black" id="45"></td>
+                <td class="square white" id="46"></td>
+                <td class="square black" id="47"></td>
+            </tr>
+            <tr>
+                <td class="square black" id="30"></td>
+                <td class="square white" id="31"></td>
+                <td class="square black" id="32"></td>
+                <td class="square white" id="33"></td>
+                <td class="square black" id="34"></td>
+                <td class="square white" id="35"></td>
+                <td class="square black" id="36"></td>
+                <td class="square white" id="37"></td>
+            </tr>
+            <tr>
+                <td class="square white" id="20"></td>
+                <td class="square black" id="21"></td>
+                <td class="square white" id="22"></td>
+                <td class="square black" id="23"></td>
+                <td class="square white" id="24"></td>
+                <td class="square black" id="25"></td>
+                <td class="square white" id="26"></td>
+                <td class="square black" id="27"></td>
+            </tr>
+            <tr>
+                <td class="square black" id="10"></td>
+                <td class="square white" id="11"></td>
+                <td class="square black" id="12"></td>
+                <td class="square white" id="13"></td>
+                <td class="square black" id="14"></td>
+                <td class="square white" id="15"></td>
+                <td class="square black" id="16"></td>
+                <td class="square white" id="17"></td>
+            </tr>
+            <tr>
+                <td class="square white" id="00"></td>
+                <td class="square black" id="01"></td>
+                <td class="square white" id="02"></td>
+                <td class="square black" id="03"></td>
+                <td class="square white" id="04"></td>
+                <td class="square black" id="05"></td>
+                <td class="square white" id="06"></td>
+                <td class="square black" id="07"></td>
+            </tr>
+        </table>
+        <input type="button" onclick="setUpBoard()" value="Start">
+        <p id="move-id"></p>
+    </body>
+</html>
